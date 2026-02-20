@@ -394,13 +394,11 @@ class OptimizerConfigProdigyPlusScheduleFree:
                 "cosine (with-schedulefree)",
                 "linear (with-schedulefree)",
                 "cosine (no-schedulefree)",
-                "cosine with restart (no-schedulefree)",
                 "linear (no-schedulefree)"
             ], {
                 "default": "schedulefree",
                 "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (with‑schedulefree)': decay mode with schedule‑free.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy."
             }),
-            "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1,"tooltip": "cosine with restart (no-schedulefree) num cycles"}),
             "prodigy_steps": ("INT", {"default": 0, "min": 0,"tooltip": "Freeze Prodigy stepsize adjustments after a certain optimiser step.Earlier versions of the optimiser recommended setting prodigy_steps equal to 5-25% of your total step count, but this should not be necessary with recent updates."}),
             "d0": ("FLOAT", {"default": 1e-6, "min": 0.0, "step": 1e-7,"tooltip": "initial learning rate"}),
             "d_coef": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Coefficient in the expression for the estimate of d (default 1.0). Values such as 0.5 and 2.0 typically work as well."}),
@@ -429,7 +427,6 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "cosine (with-schedulefree)": "cosine",
             "linear (with-schedulefree)": "linear",
             "cosine (no-schedulefree)": "cosine",
-            "cosine with restart (no-schedulefree)": "cosine_with_restarts",
             "linear (no-schedulefree)": "linear"
         }
 
@@ -444,9 +441,6 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "max_grad_norm": 0,
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
-
-        if lr_scheduler == "cosine with restart (no-schedulefree)":
-            config["lr_scheduler_num_cycles"] = kwargs["lr_scheduler_num_cycles"]
 
         # Convert all panel parameters into "key=value" strings
         panel_args = [
@@ -465,7 +459,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
         ]
 
         # When using a non‑Schedule‑Free mode, add use_schedulefree=False
-        if lr_scheduler in ["cosine (no-schedulefree)", "cosine with restart (no-schedulefree)", "linear (no-schedulefree)"]:
+        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)"]:
             panel_args.append("use_schedulefree=False")
 
         # Append any user‑supplied extra arguments (split by "|")
