@@ -465,7 +465,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
         ]
 
         # When using a non‑Schedule‑Free mode, add use_schedulefree=False
-        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)"]:
+        if lr_scheduler in ["cosine (no-schedulefree)", "cosine with restart (no-schedulefree)", "linear (no-schedulefree)"]:
             panel_args.append("use_schedulefree=False")
 
         # Append any user‑supplied extra arguments (split by "|")
