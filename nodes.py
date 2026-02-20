@@ -390,7 +390,15 @@ class OptimizerConfigProdigyPlusScheduleFree:
         return {"required": {
             "lr": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Learning rate adjustment parameter. Increases or decreases the Prodigy learning rate."}),
             "max_grad_norm": ("FLOAT", {"default": 0.0, "min": 0.0,"tooltip": "gradient clipping"}),
-            "lr_scheduler": (["constant", "cosine", "linear", "polynomial"],{"default": "constant","tooltip": "learning rate scheduler"}),
+            "lr_scheduler": ([
+                "schedulefree",
+                "cosine (no-schedulefree)",
+                "linear (no-schedulefree)",
+                "polynomial (no-schedulefree)"
+            ], {
+                "default": "schedulefree",
+                "tooltip": "learning rate scheduler.\n\n'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n'cosine/linear/polynomial (no-schedulefree)': Pure Prodigy mode."
+            }),
             "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1,"tooltip": "learning rate scheduler num cycles"}),
             "lr_scheduler_power": ("FLOAT", {"default": 1.0, "min": 0.0,"tooltip": "learning rate scheduler power, only for polynomial scheduler"}),
 
@@ -401,9 +409,9 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "use_bias_correction": ("BOOLEAN", {"default": False,"tooltip": "Use the RAdam variant of schedule‑free"}),
             "min_snr_gamma": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.01,"tooltip": "gamma for reducing the weight of high loss timesteps. Lower numbers have stronger effect. 5 is recommended by the paper"}),
             "use_stableadamw": ("BOOLEAN", {"default": True,"tooltip": "Scales parameter updates by the root‑mean‑square of the normalised gradient, in essence identical to Adafactor's gradient scaling. Set to False if the adaptive learning rate never improves."}),
-            "use_cautious": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Perform 'cautious' updates, as proposed in https://arxiv.org/pdf/2411.16085. Modifies the update to isolate and boost values that align with the current gradient."}),
+            "use_cautious": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Perform 'cautious' updates, as proposed in [https://arxiv.org/pdf/2411.16085](https://arxiv.org/pdf/2411.16085). Modifies the update to isolate and boost values that align with the current gradient."}),
             "use_adopt": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Performs a modified step where the second moment is updated after the parameter update, so as not to include the current gradient in the denominator. This is a partial implementation of ADOPT (https://arxiv.org/abs/2411.02853), as we don't have a first moment to use for the update."}),
-            "use_grams": ("BOOLEAN", {"default": False,"tooltip": "Perform 'grams' updates, as proposed in https://arxiv.org/abs/2412.17107. Modifies the update using sign operations that align with the current gradient. Note that we do not have access to a first moment, so this deviates from the paper (we apply the sign directly to the update). May have a limited effect."}),
+            "use_grams": ("BOOLEAN", {"default": False,"tooltip": "Perform 'grams' updates, as proposed in [https://arxiv.org/abs/2412.17107](https://arxiv.org/abs/2412.17107). Modifies the update using sign operations that align with the current gradient. Note that we do not have access to a first moment, so this deviates from the paper (we apply the sign directly to the update). May have a limited effect."}),
             "stochastic_rounding": ("BOOLEAN", {"default": True,"tooltip": "Use stochastic rounding for bfloat16 weights"}),
             "use_orthograd": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Updates weights using the component of the gradient that is orthogonal to the current weight direction, as described in (https://arxiv.org/pdf/2501.04697). Can help prevent overfitting and improve generalisation."}),
             "use_focus": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Modifies the update step to better handle noise at large step sizes. (https://arxiv.org/abs/2501.12243). This method is incompatible with factorisation, Muon and Adam‑atan2."}),
@@ -417,10 +425,21 @@ class OptimizerConfigProdigyPlusScheduleFree:
     CATEGORY = "FluxTrainer"
 
     def create_config(self, lr_scheduler, lr_scheduler_num_cycles, lr_scheduler_power, **kwargs):
-        # Build the configuration dictionary
+        # Mapping from UI display names to actual scheduler values
+        display_to_value = {
+            "schedulefree": "constant",
+            "cosine (no-schedulefree)": "cosine",
+            "linear (no-schedulefree)": "linear",
+            "polynomial (no-schedulefree)": "polynomial"
+        }
+
+        # Get the actual scheduler name for output
+        actual_scheduler = display_to_value[lr_scheduler]
+
+        # Build the configuration dictionary using the actual name
         config = {
             "optimizer_type": "ProdigyPlusScheduleFree",
-            "lr_scheduler": lr_scheduler,
+            "lr_scheduler": actual_scheduler,
             "lr": kwargs["lr"],
             "lr_scheduler_num_cycles": lr_scheduler_num_cycles,
             "lr_scheduler_power": lr_scheduler_power,
@@ -444,11 +463,15 @@ class OptimizerConfigProdigyPlusScheduleFree:
             f"use_focus={kwargs['use_focus']}",
         ]
 
-        # Append any user-supplied extra arguments (split by "|")
+        # When using a non‑Schedule-Free mode, add use_schedulefree=False
+        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)", "polynomial (no-schedulefree)"]:
+            panel_args.append("use_schedulefree=False")
+
+        # Append any user‑supplied extra arguments (split by "|")
         extra_args = [arg.strip() for arg in kwargs["extra_optimizer_args"].split("|") if arg.strip()]
         config["optimizer_args"] = panel_args + extra_args
 
-        return (config,)   
+        return (config,)
 
 class InitFluxLoRATraining:
     @classmethod
