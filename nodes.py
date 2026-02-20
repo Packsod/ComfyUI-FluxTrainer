@@ -388,20 +388,20 @@ class OptimizerConfigProdigyPlusScheduleFree:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "lr": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Learning rate adjustment parameter. Increases or decreases the Prodigy learning rate."}),
-            "max_grad_norm": ("FLOAT", {"default": 0.0, "min": 0.0,"tooltip": "gradient clipping"}),
+            "lr": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,
+                             "tooltip": "Learning rate adjustment parameter. Increases or decreases the Prodigy learning rate."}),
+            "max_grad_norm": ("FLOAT", {"default": 0.0, "min": 0.0,
+                                         "tooltip": "gradient clipping"}),
             "lr_scheduler": ([
                 "schedulefree",
+                "cosine (with-schedulefree)",
+                "linear (with-schedulefree)",
                 "cosine (no-schedulefree)",
-                "linear (no-schedulefree)",
-                "polynomial (no-schedulefree)"
+                "linear (no-schedulefree)"
             ], {
                 "default": "schedulefree",
-                "tooltip": "learning rate scheduler.\n\n'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n'cosine/linear/polynomial (no-schedulefree)': Pure Prodigy mode."
+                "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (with‑schedulefree)': decay mode with schedule‑free.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy."
             }),
-            "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1,"tooltip": "learning rate scheduler num cycles"}),
-            "lr_scheduler_power": ("FLOAT", {"default": 1.0, "min": 0.0,"tooltip": "learning rate scheduler power, only for polynomial scheduler"}),
-
             "prodigy_steps": ("INT", {"default": 0, "min": 0,"tooltip": "Freeze Prodigy stepsize adjustments after a certain optimiser step.Earlier versions of the optimiser recommended setting prodigy_steps equal to 5-25% of your total step count, but this should not be necessary with recent updates."}),
             "d0": ("FLOAT", {"default": 1e-6, "min": 0.0, "step": 1e-7,"tooltip": "initial learning rate"}),
             "d_coef": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Coefficient in the expression for the estimate of d (default 1.0). Values such as 0.5 and 2.0 typically work as well."}),
@@ -424,13 +424,14 @@ class OptimizerConfigProdigyPlusScheduleFree:
     FUNCTION = "create_config"
     CATEGORY = "FluxTrainer"
 
-    def create_config(self, lr_scheduler, lr_scheduler_num_cycles, lr_scheduler_power, **kwargs):
+    def create_config(self, lr_scheduler, **kwargs):
         # Mapping from UI display names to actual scheduler values
         display_to_value = {
             "schedulefree": "constant",
+            "cosine (with-schedulefree)": "cosine",
+            "linear (with-schedulefree)": "linear",
             "cosine (no-schedulefree)": "cosine",
-            "linear (no-schedulefree)": "linear",
-            "polynomial (no-schedulefree)": "polynomial"
+            "linear (no-schedulefree)": "linear"
         }
 
         # Get the actual scheduler name for output
@@ -441,8 +442,6 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "optimizer_type": "ProdigyPlusScheduleFree",
             "lr_scheduler": actual_scheduler,
             "lr": kwargs["lr"],
-            "lr_scheduler_num_cycles": lr_scheduler_num_cycles,
-            "lr_scheduler_power": lr_scheduler_power,
             "max_grad_norm": kwargs["max_grad_norm"],
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
@@ -463,8 +462,8 @@ class OptimizerConfigProdigyPlusScheduleFree:
             f"use_focus={kwargs['use_focus']}",
         ]
 
-        # When using a non‑Schedule-Free mode, add use_schedulefree=False
-        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)", "polynomial (no-schedulefree)"]:
+        # When using a non‑Schedule‑Free mode, add use_schedulefree=False
+        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)"]:
             panel_args.append("use_schedulefree=False")
 
         # Append any user‑supplied extra arguments (split by "|")
