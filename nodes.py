@@ -391,14 +391,14 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "min_snr_gamma": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.01,"tooltip": "gamma for reducing the weight of high loss timesteps. Lower numbers have stronger effect. 5 is recommended by the paper"}),
             "lr_scheduler": ([
                 "schedulefree",
-                "cosine (with-schedulefree)",
-                "linear (with-schedulefree)",
                 "cosine (no-schedulefree)",
-                "linear (no-schedulefree)"
+                "linear (no-schedulefree)",
+                "polynomial (no-schedulefree, power=1)"
             ], {
                 "default": "schedulefree",
-                "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (with‑schedulefree)': decay mode with schedule‑free.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy."
+                "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy.\n""'polynomial (no‑schedulefree, power=1)': polynomial decay (no‑schedulefree) with power 1."
             }),
+                "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1, "max": 10,"tooltip": "Number of cycles for polynomial scheduler. ""Only used when lr_scheduler is polynomial (no-schedulefree)."}),
             "prodigy_steps": ("INT", {"default": 0, "min": 0,"tooltip": "Freeze Prodigy stepsize adjustments after a certain optimiser step.Earlier versions of the optimiser recommended setting prodigy_steps equal to 5-25% of your total step count, but this should not be necessary with recent updates."}),
             "d0": ("FLOAT", {"default": 1e-6, "min": 0.0, "step": 1e-7,"tooltip": "initial learning rate"}),
             "d_coef": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Coefficient in the expression for the estimate of d (default 1.0). Values such as 0.5 and 2.0 typically work as well."}),
@@ -411,6 +411,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "stochastic_rounding": ("BOOLEAN", {"default": True,"tooltip": "Use stochastic rounding for bfloat16 weights"}),
             "use_orthograd": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Updates weights using the component of the gradient that is orthogonal to the current weight direction, as described in (https://arxiv.org/pdf/2501.04697). Can help prevent overfitting and improve generalisation."}),
             "use_focus": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Modifies the update step to better handle noise at large step sizes. (https://arxiv.org/abs/2501.12243). This method is incompatible with factorisation, Muon and Adam‑atan2."}),
+            "use_speed": ("BOOLEAN", {"default": False,"tooltip": "Something of my own creation I've dubbed Simplified Prodigy with rElativE D. It replaces Prodigy's numerator/denominator ratio with a momentum-based estimate of directional progress. SPEED uses less memory, is scale-insensitive, and can be a better choice when training multiple networks, however, it can be unstable when used with weight decay or for extremely long training runs (where it's recommended to use prodigy_steps)"}),
 
             "extra_optimizer_args": ("STRING", {"multiline": True, "default": "","tooltip": "additional optimizer args"}),
         }}
@@ -424,10 +425,9 @@ class OptimizerConfigProdigyPlusScheduleFree:
         # Mapping from UI display names to actual scheduler values
         display_to_value = {
             "schedulefree": "constant",
-            "cosine (with-schedulefree)": "cosine",
-            "linear (with-schedulefree)": "linear",
             "cosine (no-schedulefree)": "cosine",
-            "linear (no-schedulefree)": "linear"
+            "linear (no-schedulefree)": "linear",
+            "polynomial (no-schedulefree, power=1)": "polynomial",
         }
 
         # Get the actual scheduler name for output
@@ -441,6 +441,10 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "max_grad_norm": 0,
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
+
+        if lr_scheduler == "polynomial (no-schedulefree, power=1)":
+            config["lr_scheduler_num_cycles"] = kwargs["lr_scheduler_num_cycles"]
+            config["lr_scheduler_power"] = 1.0
 
         # Convert all panel parameters into "key=value" strings
         panel_args = [
@@ -456,10 +460,11 @@ class OptimizerConfigProdigyPlusScheduleFree:
             f"stochastic_rounding={kwargs['stochastic_rounding']}",
             f"use_orthograd={kwargs['use_orthograd']}",
             f"use_focus={kwargs['use_focus']}",
+            f"use_speed={kwargs['use_speed']}",
         ]
 
         # When using a non‑Schedule‑Free mode, add use_schedulefree=False
-        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)"]:
+        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)", "polynomial (no-schedulefree, power=1)"]:
             panel_args.append("use_schedulefree=False")
 
         # Append any user‑supplied extra arguments (split by "|")
