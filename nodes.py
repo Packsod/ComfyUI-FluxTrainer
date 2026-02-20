@@ -388,26 +388,24 @@ class OptimizerConfigProdigyPlusScheduleFree:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "lr": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,
-                             "tooltip": "Learning rate adjustment parameter. Increases or decreases the Prodigy learning rate."}),
-            "max_grad_norm": ("FLOAT", {"default": 0.0, "min": 0.0,
-                                         "tooltip": "gradient clipping"}),
+            "min_snr_gamma": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.01,"tooltip": "gamma for reducing the weight of high loss timesteps. Lower numbers have stronger effect. 5 is recommended by the paper"}),
             "lr_scheduler": ([
                 "schedulefree",
                 "cosine (with-schedulefree)",
                 "linear (with-schedulefree)",
                 "cosine (no-schedulefree)",
+                "cosine with restart (no-schedulefree)",
                 "linear (no-schedulefree)"
             ], {
                 "default": "schedulefree",
                 "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (with‑schedulefree)': decay mode with schedule‑free.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy."
             }),
+            "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1,"tooltip": "cosine with restart (no-schedulefree) num cycles"}),
             "prodigy_steps": ("INT", {"default": 0, "min": 0,"tooltip": "Freeze Prodigy stepsize adjustments after a certain optimiser step.Earlier versions of the optimiser recommended setting prodigy_steps equal to 5-25% of your total step count, but this should not be necessary with recent updates."}),
             "d0": ("FLOAT", {"default": 1e-6, "min": 0.0, "step": 1e-7,"tooltip": "initial learning rate"}),
             "d_coef": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Coefficient in the expression for the estimate of d (default 1.0). Values such as 0.5 and 2.0 typically work as well."}),
             "split_groups": ("BOOLEAN", {"default": False,"tooltip": "Track individual adaptation values for each parameter group.As of v2.0.0, split_groups_mean is False by default, so full, per-group training is always active. Set split_groups_mean=True to replicate the behaviour of older versions."}),
             "use_bias_correction": ("BOOLEAN", {"default": False,"tooltip": "Use the RAdam variant of schedule‑free"}),
-            "min_snr_gamma": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.01,"tooltip": "gamma for reducing the weight of high loss timesteps. Lower numbers have stronger effect. 5 is recommended by the paper"}),
             "use_stableadamw": ("BOOLEAN", {"default": True,"tooltip": "Scales parameter updates by the root‑mean‑square of the normalised gradient, in essence identical to Adafactor's gradient scaling. Set to False if the adaptive learning rate never improves."}),
             "use_cautious": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Perform 'cautious' updates, as proposed in [https://arxiv.org/pdf/2411.16085](https://arxiv.org/pdf/2411.16085). Modifies the update to isolate and boost values that align with the current gradient."}),
             "use_adopt": ("BOOLEAN", {"default": False,"tooltip": "Experimental. Performs a modified step where the second moment is updated after the parameter update, so as not to include the current gradient in the denominator. This is a partial implementation of ADOPT (https://arxiv.org/abs/2411.02853), as we don't have a first moment to use for the update."}),
@@ -431,6 +429,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "cosine (with-schedulefree)": "cosine",
             "linear (with-schedulefree)": "linear",
             "cosine (no-schedulefree)": "cosine",
+            "cosine with restart (no-schedulefree)": "cosine_with_restarts",
             "linear (no-schedulefree)": "linear"
         }
 
@@ -441,10 +440,13 @@ class OptimizerConfigProdigyPlusScheduleFree:
         config = {
             "optimizer_type": "ProdigyPlusScheduleFree",
             "lr_scheduler": actual_scheduler,
-            "lr": kwargs["lr"],
-            "max_grad_norm": kwargs["max_grad_norm"],
+            "lr": 1.0,
+            "max_grad_norm": 0,
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
+
+        if lr_scheduler == "cosine with restart (no-schedulefree)":
+            config["lr_scheduler_num_cycles"] = kwargs["lr_scheduler_num_cycles"]
 
         # Convert all panel parameters into "key=value" strings
         panel_args = [
