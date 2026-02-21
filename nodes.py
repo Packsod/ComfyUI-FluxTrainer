@@ -438,7 +438,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "optimizer_type": "ProdigyPlusScheduleFree",
             "lr_scheduler": actual_scheduler,
             "lr": 1.0,
-            "max_grad_norm": 0,
+            "max_grad_norm": 0 if actual_scheduler == "constant" else 1, # The ProdigyPlusScheduleFree optimizer already handles gradient clipping internally, so using external gradient clipping methods is not recommended.
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
 
@@ -464,7 +464,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
         ]
 
         # When using a non‑Schedule‑Free mode, add use_schedulefree=False
-        if lr_scheduler in ["cosine (no-schedulefree)", "linear (no-schedulefree)", "polynomial (no-schedulefree, power=1)"]:
+        if lr_scheduler != "schedulefree":
             panel_args.append("use_schedulefree=False")
 
         # Append any user‑supplied extra arguments (split by "|")
