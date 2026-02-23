@@ -396,7 +396,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
                 "polynomial (no-schedulefree)"
             ], {
                 "default": "schedulefree",
-                "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy.\n""'polynomial (no‑schedulefree, power=1)': polynomial decay (no‑schedulefree) with power 1."
+                "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy.\n""'polynomial (no‑schedulefree)': polynomial decay (no‑schedulefree)."
             }),
                 "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1, "max": 10,"tooltip": "polynomial scheduler option, number of cycles."}),
                 "lr_scheduler_power": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 2.0,"tooltip": "polynomial scheduler option: ""Higher power = sharper initial LR drop, gentler later; ""lower power = gentler initial drop, sharper later. ""Power=1 = linear scheduler."}),
