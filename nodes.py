@@ -393,12 +393,13 @@ class OptimizerConfigProdigyPlusScheduleFree:
                 "schedulefree",
                 "cosine (no-schedulefree)",
                 "linear (no-schedulefree)",
-                "polynomial (no-schedulefree, power=1)"
+                "polynomial (no-schedulefree)"
             ], {
                 "default": "schedulefree",
                 "tooltip": "learning rate scheduler.\n\n""'schedulefree': Use Schedule‑Free mode (default), built‑in simulated decay, no external scheduler.\n""'cosine/linear (no‑schedulefree)': decay mode without schedule‑free, as like pure Prodigy.\n""'polynomial (no‑schedulefree, power=1)': polynomial decay (no‑schedulefree) with power 1."
             }),
-                "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1, "max": 10,"tooltip": "Number of cycles for polynomial scheduler. ""Only used when lr_scheduler is polynomial (no-schedulefree)."}),
+                "lr_scheduler_num_cycles": ("INT", {"default": 1, "min": 1, "max": 10,"tooltip": "polynomial scheduler option, number of cycles."}),
+                "lr_scheduler_power": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 2.0,"tooltip": "polynomial scheduler option: ""Higher power = sharper initial LR drop, gentler later; ""lower power = gentler initial drop, sharper later. ""Power=1 = linear scheduler."}),
             "prodigy_steps": ("INT", {"default": 0, "min": 0,"tooltip": "Freeze Prodigy stepsize adjustments after a certain optimiser step.Earlier versions of the optimiser recommended setting prodigy_steps equal to 5-25% of your total step count, but this should not be necessary with recent updates."}),
             "d0": ("FLOAT", {"default": 1e-6, "min": 0.0, "step": 1e-7,"tooltip": "initial learning rate"}),
             "d_coef": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 1e-7,"tooltip": "Coefficient in the expression for the estimate of d (default 1.0). Values such as 0.5 and 2.0 typically work as well."}),
@@ -427,7 +428,7 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "schedulefree": "constant",
             "cosine (no-schedulefree)": "cosine",
             "linear (no-schedulefree)": "linear",
-            "polynomial (no-schedulefree, power=1)": "polynomial",
+            "polynomial (no-schedulefree)": "polynomial",
         }
 
         # Get the actual scheduler name for output
@@ -442,9 +443,9 @@ class OptimizerConfigProdigyPlusScheduleFree:
             "min_snr_gamma": kwargs["min_snr_gamma"] if kwargs["min_snr_gamma"] != 0.0 else None
         }
 
-        if lr_scheduler == "polynomial (no-schedulefree, power=1)":
+        if lr_scheduler == "polynomial (no-schedulefree)":
             config["lr_scheduler_num_cycles"] = kwargs["lr_scheduler_num_cycles"]
-            config["lr_scheduler_power"] = 1.0
+            config["lr_scheduler_power"] = kwargs["lr_scheduler_power"]
 
         # Convert all panel parameters into "key=value" strings
         panel_args = [
